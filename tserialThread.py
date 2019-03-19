@@ -52,7 +52,10 @@ class tserialThreadClass(QThread):
     def run(self):
         while True:
             msj=self.serport.readline()
-            self.mesaj.emit(str(msj))
+            msj=str(msj,'utf-8')
+            striped=msj.replace("b","")
+            striped=striped.replace("\r\n","")
+            self.mesaj.emit(striped)
 
     def get_ports(self):
         if sys.platform.startswith('win'):

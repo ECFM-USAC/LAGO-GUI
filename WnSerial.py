@@ -69,7 +69,7 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        Dialog.setWindowTitle(_translate("Dialog", "Serial Connection"))
         self.label_3.setText(_translate("Dialog", "Data bits"))
         self.label.setText(_translate("Dialog", "Port"))
         self.label_5.setText(_translate("Dialog", "Parity"))

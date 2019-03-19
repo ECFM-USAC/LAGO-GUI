@@ -9,14 +9,17 @@ class tcpClientThreadClass(QThread):
 
 
     def tcpSetup(self,ip,port):
-        self.port = int(port)
+        self.port = port
         self.ip = ip
         self.tflag = 0
 
         self.clientTCP=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.clientTCP.settimeout(1)
 
         try:
+            self.port=int(self.port)
             self.clientTCP.connect((self.ip, self.port))
+            self.clientTCP.settimeout(None)
             return 1
         except:
             return 0
@@ -24,7 +27,12 @@ class tcpClientThreadClass(QThread):
 
     def run(self):
         while True:
-            comando = self.clientTCP.recv()
-            self.tcpmess.emit(str(comando))
-            print(comando)
+            try:
+                comando = self.clientTCP.recv(20)
+                comando=str(comando,'utf-8')
+                self.tcpmess.emit(str(comando))
+            except:
+                print("Socket Error")
 
+    def close(self):
+        self.clientTCP.close()
