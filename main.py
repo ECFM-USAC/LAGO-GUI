@@ -5,6 +5,7 @@ from tserialThread import tserialThreadClass
 from tcpClientThread import tcpClientThreadClass
 
 import numpy as np
+import statistics as sts
 
 
 class MainClass(QMainWindow,WnMain.Ui_MainWindow):
@@ -17,13 +18,32 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         self.pushtcpconnect.clicked.connect(self.btnConnectClicked)
         self.pushtcpclear.clicked.connect(self.btnCleartClicked)
         self.pushtcpdisconnect.clicked.connect(self.btnStopTClicked)
-        self.pushHistoStart.clicked.connect(self.histo_graph)
-        self.pushSensorStart.clicked.connect(self.sensor_graph)
-        self.pushTSStart.clicked.connect(self.timestamp_graph)
+        self.TmaxA=0
+        self.PmaxA=0
+        self.TminA=100
+        self.PminA=100
 
 
     def histo_graph(self):
-        data = np.random.laplace(loc=15, scale=3, size=5000)
+        count = TCPWindow.hdata
+        self.maxvalue=np.amax(count)
+        self.MaxVLineEdit.setText(str(self.maxvalue))
+        self.median = sts.median(count)
+        self.MedianLineEdit.setText(str(self.median))
+        self.variance = sts.pvariance(count)
+        self.VarianceLineEdit.setText(str(self.variance))
+        self.mean = sts.mean(count)
+        self.MeanLineEdit.setText(str(self.mean))
+        self.mode = np.argmax(count)
+        self.ModeLineEdit.setText(str(self.mode))
+        self.sdev = sts.stdev(count)
+        self.StandardDLineEdit.setText(str(round(self.sdev,10)))
+        self.summation=np.sum(count)
+        self.SummLineEdit.setText((str(self.summation)))
+
+        self.rms = np.sqrt(np.mean(count** 2))
+        self.RMSLineEdit.setText((str(self.rms)))
+
         self.MplWidget.canvas.axes.clear()
         self.MplWidget.canvas.axes.spines["top"].set_visible(False)
         self.MplWidget.canvas.axes.spines["right"].set_visible(False)
@@ -32,14 +52,65 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         self.MplWidget.canvas.axes.set_xlabel("Maximum Amplitude", fontsize=16)
         self.MplWidget.canvas.axes.set_ylabel("Count", fontsize=16)
         self.MplWidget.canvas.axes.tick_params(axis='both', labelsize=14)
-        self.MplWidget.canvas.axes.hist(data, bins='auto', color="#3F5D7D")
-        self.MplWidget.canvas.axes.set_yticks(range(50, 501, 50))
-        self.MplWidget.canvas.axes.set_xticks(range(-50, 51, 10))
+        self.MplWidget.canvas.axes.plot(count, color="#3F5D7D")
+        #self.MplWidget.canvas.axes.hist(range(16383), 16383, weights=count, color="#3F5D7D")
+        self.MplWidget.canvas.axes.set_yticks(range(0, 501, 50))
+        self.MplWidget.canvas.axes.set_xticks(range(0, 16385, 2048))
         self.MplWidget.canvas.draw()
 
     def sensor_graph(self):
-        sensorT = np.random.normal(size=100)
-        sensorP = np.random.logistic(size=100)
+        self.lcdNumber.display(str(TCPWindow.tsdata[59]))
+        self.lcdNumber_2.display(str(TCPWindow.psdata[59]))
+
+        self.Tmax=np.max(TCPWindow.tsdata)
+        if(self.Tmax>self.TmaxA):
+            self.TmaxA=self.Tmax
+        self.MaxVTLineEdit.setText(str(self.TmaxA))
+
+        self.Pmax=np.max(TCPWindow.psdata)
+        if (self.Pmax > self.PmaxA):
+            self.PmaxA = self.Pmax
+        self.MaxVPLineEdit.setText(str(self.PmaxA))
+
+        self.Tmin=np.min(TCPWindow.tsdata)
+        if(self.Tmin==0):
+            self.Tmin=TCPWindow.tsdata[59]
+        if(self.Tmin<self.TminA):
+            self.TminA=self.Tmin
+        self.MinTVLineEdit.setText(str(self.TminA))
+
+        self.Pmin=np.min(TCPWindow.psdata)
+        if(self.Pmin==0):
+            self.Pmin=TCPWindow.psdata[59]
+        if (self.Pmin < self.PminA):
+            self.PminA = self.Pmin
+        self.MinPVLineEdit.setText(str(self.PminA))
+
+        self.Tpasttrend=np.sum(TCPWindow.tsdata[40:49])
+        self.Tprestrend=np.sum(TCPWindow.tsdata[50:59])
+        self.TTrend=self.Tpasttrend-self.Tprestrend
+        if(self.TTrend<0):
+            self.ADFTLineEdit.setText("Rising")
+        elif(self.TTrend>0):
+            self.ADFTLineEdit.setText("Falling")
+        elif(self.TTrend==0):
+            self.ADFTLineEdit.setText("Fixed")
+
+        self.Ppasttrend = np.sum(TCPWindow.psdata[40:49])
+        self.Pprestrend = np.sum(TCPWindow.psdata[50:59])
+        self.PTrend = self.Ppasttrend - self.Pprestrend
+        if (self.PTrend < 0):
+            self.ADFPLineEdit.setText("Rising")
+        elif (self.PTrend > 0):
+            self.ADFPLineEdit.setText("Falling")
+        elif (self.PTrend == 0):
+            self.ADFPLineEdit.setText("Fixed")
+
+        self.Tmean=round(np.mean(TCPWindow.tsdata),4)
+        self.MeanTLineEdit.setText(str(self.Tmean))
+        self.Pmean=round(np.mean(TCPWindow.psdata),4)
+        self.MeanPLineEdit.setText(str(self.Pmean))
+
         self.SensorMplWidget.canvas.axes1.clear()
         self.SensorMplWidget.canvas.axes2.clear()
         self.SensorMplWidget.canvas.axes1.spines["top"].set_visible(False)
@@ -47,25 +118,24 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         self.SensorMplWidget.canvas.axes1.get_xaxis().tick_bottom()
         self.SensorMplWidget.canvas.axes1.get_yaxis().tick_left()
         self.SensorMplWidget.canvas.axes1.set_ylabel("Temperature", fontsize=12)
-        self.SensorMplWidget.canvas.axes1.plot(sensorT, color="#3F5D7D")
+        self.SensorMplWidget.canvas.axes1.plot(TCPWindow.tsdata, color="#3F5D7D")
         self.SensorMplWidget.canvas.axes2.spines["top"].set_visible(False)
         self.SensorMplWidget.canvas.axes2.spines["right"].set_visible(False)
         self.SensorMplWidget.canvas.axes2.get_xaxis().tick_bottom()
         self.SensorMplWidget.canvas.axes2.get_yaxis().tick_left()
         self.SensorMplWidget.canvas.axes2.set_xlabel("Time", fontsize=12)
         self.SensorMplWidget.canvas.axes2.set_ylabel("Pressure", fontsize=12)
-        self.SensorMplWidget.canvas.axes2.plot(sensorP, color="#3F5D7D")
-
+        self.SensorMplWidget.canvas.axes2.plot(TCPWindow.psdata, color="#3F5D7D")
         self.SensorMplWidget.canvas.draw()
 
-    def timestamp_graph(self):
-        timestamp = np.random.normal(size=30)
+    def osc_graph(self):
+        self.oscidata = TCPWindow.oscdata
         self.TSMplWidget.canvas.axes.clear()
         self.TSMplWidget.canvas.axes.spines["top"].set_visible(False)
         self.TSMplWidget.canvas.axes.spines["right"].set_visible(False)
         self.TSMplWidget.canvas.axes.get_xaxis().tick_bottom()
         self.TSMplWidget.canvas.axes.get_yaxis().tick_left()
-        self.TSMplWidget.canvas.axes.hist(timestamp, color="#3F5D7D", bins=100)
+        self.TSMplWidget.canvas.axes.plot(self.oscidata, color="#3F5D7D")
         self.TSMplWidget.canvas.axes.set_xlabel("Count", fontsize=16)
         self.TSMplWidget.canvas.axes.set_ylabel("Time", fontsize=16)
         self.TSMplWidget.canvas.draw()
@@ -166,6 +236,10 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
         self.window = QDialog()
         self.ui = WnTCP.Ui_Dialog()
         self.ui.setupUi(self.window)
+        TCPWindow.hdata=[]
+        TCPWindow.tsdata=[0]*60
+        TCPWindow.psdata=[0]*60
+        TCPWindow.oscdata=[0]*120
 
         self.ui.buttonBoxOk.accepted.connect(self.btnClickedOk)
         self.ui.buttonBoxCancel.rejected.connect(self.btnClickedCancel)
@@ -183,9 +257,16 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
         self.flag=self.myTCPClient.tcpSetup(self.tcpIP,self.tcpPort)
 
         if (self.flag==1):
-            wmain.tcpTextEdit.append("Server Found")
+            wmain.tcpTextEdit.append("Connection Established")
             self.myTCPClient.tcpmess.connect(wmain.tcpTextEdit.append)
             self.myTCPClient.start()
+            self.myTCPClient.hraw_data.connect(self.dataGetH)
+            self.myTCPClient.raw_osc.connect(self.dataGetOsc)
+            self.myTCPClient.tsraw_data.connect(self.dataGetTS)
+            self.myTCPClient.psraw_data.connect(self.dataGetPS)
+            self.myTCPClient.raw_time.connect(self.dataGetTime)
+
+
             wmain.pushtcpdisconnect.setEnabled(True)
             wmain.pushtcpconnect.setEnabled(False)
         else:
@@ -194,6 +275,81 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
     def btnClickedCancel(self):
         self.window.close()
 
+    def dataGetH(self, value):
+        self.raw=value
+        TCPWindow.hdata=np.fromstring(self.raw, dtype=int, sep='\n')
+        if(len(TCPWindow.hdata)>10):
+            wmain.histo_graph()
+        return
+
+    def dataGetOsc(self, value):
+        self.rawosc=value
+        TCPWindow.oscdata.append(int(self.rawosc))
+        TCPWindow.oscdata.pop(0)
+        wmain.osc_graph()
+        return
+
+    def dataGetTS(self, value):
+        self.raw=value
+        TCPWindow.tsdata.append(int(self.raw))
+        TCPWindow.tsdata.pop(0)
+        return
+
+    def dataGetPS(self, value):
+        self.raw=value
+        TCPWindow.psdata.append(int(self.raw))
+        TCPWindow.psdata.pop(0)
+        wmain.sensor_graph()
+        return
+
+    def dataGetTime(self, value):
+        self.time=value
+        self.date=str(self.time[0:4])
+        self.month=str(self.time[6:7])
+        self.day=str(self.time[9:10])
+        self.hours=str(self.time[11:13])
+
+
+        self.minutes=str(self.time[14:16])
+        self.seconds=str(self.time[17:19])
+        self.lhours=int(self.hours)-6
+        if(self.lhours<0):
+            self.lhours=(self.lhours+24)
+
+        wmain.yearlabel.setText(self.date)
+        wmain.daylabel.setText(self.day)
+        if(int(self.month)==1):
+            wmain.monthlabel.setText("January")
+        elif(int(self.month)==2):
+            wmain.monthlabel.setText("February")
+        elif(int(self.month)==3):
+            wmain.monthlabel.setText("March")
+        elif(int(self.month)==4):
+            wmain.monthlabel.setText("April")
+        elif(int(self.month)==5):
+            wmain.monthlabel.setText("May")
+        elif(int(self.month)==6):
+            wmain.monthlabel.setText("June")
+        elif(int(self.month)==7):
+            wmain.monthlabel.setText("July")
+        elif(int(self.month)==8):
+            wmain.monthlabel.setText("August")
+        elif(int(self.month)==9):
+            wmain.monthlabel.setText("September")
+        elif(int(self.month)==10):
+            wmain.monthlabel.setText("October")
+        elif(int(self.month)==11):
+            wmain.monthlabel.setText("November")
+        elif(int(self.month)==12):
+            wmain.monthlabel.setText("December")
+
+        wmain.LCDUHH.display(int(self.hours))
+        wmain.LCDUMM.display(int(self.minutes))
+        wmain.LCDUSS.display(int(self.seconds))
+        wmain.LCDLHH.display(int(self.lhours))
+        wmain.LCDLMM.display(int(self.minutes))
+        wmain.LCDLSS.display(int(self.seconds))
+        return
 
 if __name__ == "__main__":
     appgui = QApplication(sys.argv)

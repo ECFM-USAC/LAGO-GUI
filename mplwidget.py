@@ -20,4 +20,4 @@ class MplWidget(QWidget):
         self.canvas.axes.set_ylabel("Count", fontsize=16)
         self.canvas.axes.tick_params(axis='both', labelsize=14)
         self.canvas.axes.set_yticks(range(50, 501, 50))
-        self.canvas.axes.set_xticks(range(-50, 51, 10))
+        self.canvas.axes.set_xticks(range(0, 16385, 2048))

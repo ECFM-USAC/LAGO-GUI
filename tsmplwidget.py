@@ -15,8 +15,6 @@ class TSMplWidget(QWidget):
         self.canvas.axes.spines["right"].set_visible(False)
         self.canvas.axes.get_xaxis().tick_bottom()
         self.canvas.axes.get_yaxis().tick_left()
-        self.canvas.axes.set_xlabel("Time", fontsize=16)
-        self.canvas.axes.set_ylabel("Time", fontsize=16)
         self.canvas.axes.tick_params(axis='both', labelsize=14)
         self.canvas.axes.set_yticks(range(50, 501, 50))
         self.canvas.axes.set_xticks(range(-50, 51, 10))
