@@ -34,18 +34,33 @@ class tcpClientThreadClass(QThread):
     def run(self):
         while True:
             try:
+###Datos Histograma
+                self.clientTCP.send('data'.encode())
+                self.hdata=[]
+                while True:
+                    self.buffer = self.clientTCP.recv(511).decode('utf-8')
+                    if(len(self.buffer)<511):
+                        self.hdata.append(self.buffer)
+                        break
+                    else:
+                        self.hdata.append(self.buffer)
 
-                #self.clientTCP.send('data'.encode())
-                #self.buffer1 = self.clientTCP.recv(65535).decode('utf-8')
-                #self.buffer1=self.buffer1.strip()
-                #self.hraw_data.emit(self.buffer1)
+                self.histostr="".join(self.hdata)
+                self.hraw_data.emit(self.histostr)
 
-
-
+###Datos Osciloscopio
                 self.clientTCP.send('osc'.encode())
-                self.buffer5 = self.clientTCP.recv(128).decode('utf-8')
-                self.buffer5=self.buffer5.strip()
-                self.raw_osc.emit(self.buffer5)
+                self.oscdata=[]
+                while True:
+                    self.buffer = self.clientTCP.recv(511).decode('utf-8')
+                    if(len(self.buffer)<511):
+                        self.oscdata.append(self.buffer)
+                        break
+                    else:
+                        self.oscdata.append(self.buffer)
+
+                self.oscostr="".join(self.oscdata)
+                self.raw_osc.emit(self.oscostr)
 
 
                 self.clientTCP.send('sensorT'.encode())
@@ -65,6 +80,26 @@ class tcpClientThreadClass(QThread):
 
             except Exception as e:
                 self.tcpmess.emit(str("Something's wrong with %s:%d. Exception is %s" % (self.ip, self.port, e)))
+
+
+    def updateV(self, thr, dac, decf):
+        self.vthreshold= thr
+        self.vlevel=dac
+        self.decfactor=decf
+
+
+        self.clientTCP.send("thr_write".encode())
+        time.sleep(0.1)
+        self.clientTCP.send((str(self.vthreshold)+'\r').encode())
+        time.sleep(0.1)
+        self.clientTCP.send("dac_write".encode())
+        time.sleep(0.1)
+        self.clientTCP.send((str(self.vlevel)+'\r').encode())
+        time.sleep(0.1)
+        self.clientTCP.send("dec_factor".encode())
+        time.sleep(0.1)
+        self.clientTCP.send((str(self.decfactor)+'\r').encode())
+
 
 
     def close(self):

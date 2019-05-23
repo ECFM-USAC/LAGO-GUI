@@ -18,6 +18,7 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         self.pushtcpconnect.clicked.connect(self.btnConnectClicked)
         self.pushtcpclear.clicked.connect(self.btnCleartClicked)
         self.pushtcpdisconnect.clicked.connect(self.btnStopTClicked)
+        self.updatebutton.clicked.connect(self.btnUpdateClicked)
         self.TmaxA=0
         self.PmaxA=0
         self.TminA=100
@@ -53,7 +54,7 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         self.MplWidget.canvas.axes.set_ylabel("Count", fontsize=16)
         self.MplWidget.canvas.axes.tick_params(axis='both', labelsize=14)
         self.MplWidget.canvas.axes.plot(count, color="#3F5D7D")
-        #self.MplWidget.canvas.axes.hist(range(16383), 16383, weights=count, color="#3F5D7D")
+#        self.MplWidget.canvas.axes.hist(range(16383), 16383, weights=count, color="#3F5D7D")
         self.MplWidget.canvas.axes.set_yticks(range(0, 501, 50))
         self.MplWidget.canvas.axes.set_xticks(range(0, 16385, 2048))
         self.MplWidget.canvas.draw()
@@ -117,15 +118,15 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         self.SensorMplWidget.canvas.axes1.spines["right"].set_visible(False)
         self.SensorMplWidget.canvas.axes1.get_xaxis().tick_bottom()
         self.SensorMplWidget.canvas.axes1.get_yaxis().tick_left()
-        self.SensorMplWidget.canvas.axes1.set_ylabel("Temperature", fontsize=12)
-        self.SensorMplWidget.canvas.axes1.plot(TCPWindow.tsdata, color="#3F5D7D")
+        self.SensorMplWidget.canvas.axes1.set_ylabel("Temperature (°C)", fontsize=12)
+        self.SensorMplWidget.canvas.axes1.plot(range(-60,0), TCPWindow.tsdata, color="#3F5D7D")
         self.SensorMplWidget.canvas.axes2.spines["top"].set_visible(False)
         self.SensorMplWidget.canvas.axes2.spines["right"].set_visible(False)
         self.SensorMplWidget.canvas.axes2.get_xaxis().tick_bottom()
         self.SensorMplWidget.canvas.axes2.get_yaxis().tick_left()
-        self.SensorMplWidget.canvas.axes2.set_xlabel("Time", fontsize=12)
-        self.SensorMplWidget.canvas.axes2.set_ylabel("Pressure", fontsize=12)
-        self.SensorMplWidget.canvas.axes2.plot(TCPWindow.psdata, color="#3F5D7D")
+        self.SensorMplWidget.canvas.axes2.set_xlabel("Time (s)", fontsize=12)
+        self.SensorMplWidget.canvas.axes2.set_ylabel("Pressure (hPa) ", fontsize=12)
+        self.SensorMplWidget.canvas.axes2.plot(range(-60,0), TCPWindow.psdata, color="#3F5D7D")
         self.SensorMplWidget.canvas.draw()
 
     def osc_graph(self):
@@ -136,9 +137,15 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         self.TSMplWidget.canvas.axes.get_xaxis().tick_bottom()
         self.TSMplWidget.canvas.axes.get_yaxis().tick_left()
         self.TSMplWidget.canvas.axes.plot(self.oscidata, color="#3F5D7D")
-        self.TSMplWidget.canvas.axes.set_xlabel("Count", fontsize=16)
-        self.TSMplWidget.canvas.axes.set_ylabel("Time", fontsize=16)
+        self.TSMplWidget.canvas.axes.set_xlabel("Time (s)", fontsize=16)
+        self.TSMplWidget.canvas.axes.set_ylabel("Voltage (V)", fontsize=16)
         self.TSMplWidget.canvas.draw()
+
+    def btnUpdateClicked(self):
+        self.thrvalue = self.spinBoxVT.value()
+        self.dacvalue = self.spinBoxVL.value()
+        self.decfvalue = self.spinBoxDF.value()
+        wtcp.myTCPClient.updateV(self.thrvalue, self.dacvalue, self.decfvalue)
 
 
     def btnStartSClicked(self):
@@ -157,6 +164,7 @@ class MainClass(QMainWindow,WnMain.Ui_MainWindow):
         wtcp.myTCPClient.terminate()
         self.pushtcpconnect.setEnabled(True)
         self.pushtcpdisconnect.setEnabled(False)
+        self.updatebutton.setEnabled((False))
 
     def btnClearSClicked(self):
         self.serialTextEdit.clear()
@@ -239,7 +247,7 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
         TCPWindow.hdata=[]
         TCPWindow.tsdata=[0]*60
         TCPWindow.psdata=[0]*60
-        TCPWindow.oscdata=[0]*120
+        TCPWindow.oscdata=[]
 
         self.ui.buttonBoxOk.accepted.connect(self.btnClickedOk)
         self.ui.buttonBoxCancel.rejected.connect(self.btnClickedCancel)
@@ -269,6 +277,7 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
 
             wmain.pushtcpdisconnect.setEnabled(True)
             wmain.pushtcpconnect.setEnabled(False)
+            wmain.updatebutton.setEnabled(True)
         else:
             wmain.tcpTextEdit.append("Server not available")
 
@@ -284,10 +293,10 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
 
     def dataGetOsc(self, value):
         self.rawosc=value
-        TCPWindow.oscdata.append(int(self.rawosc))
-        TCPWindow.oscdata.pop(0)
+        TCPWindow.oscdata = np.fromstring(self.rawosc, dtype=int, sep='\n')
         wmain.osc_graph()
         return
+
 
     def dataGetTS(self, value):
         self.raw=value
@@ -304,9 +313,9 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
 
     def dataGetTime(self, value):
         self.time=value
-        self.date=str(self.time[0:4])
+        self.year=str(self.time[0:4])
         self.month=str(self.time[6:7])
-        self.day=str(self.time[9:10])
+        self.day=str(self.time[8:10])
         self.hours=str(self.time[11:13])
 
 
@@ -316,7 +325,7 @@ class TCPWindow(QDialog,WnTCP.Ui_Dialog):
         if(self.lhours<0):
             self.lhours=(self.lhours+24)
 
-        wmain.yearlabel.setText(self.date)
+        wmain.yearlabel.setText(self.year)
         wmain.daylabel.setText(self.day)
         if(int(self.month)==1):
             wmain.monthlabel.setText("January")
